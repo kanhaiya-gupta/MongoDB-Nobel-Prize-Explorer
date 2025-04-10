@@ -1,8 +1,13 @@
 # src/visualization.py
 import matplotlib.pyplot as plt
+import os
 from src.config import Config
 
 def visualize_laureates_by_country(collection):
+    # Ensure results directory exists
+    os.makedirs(Config.RESULTS_DIR, exist_ok=True)
+    
+    # Aggregate laureates by country
     pipeline = [
         {'$group': {'_id': '$bornCountry', 'count': {'$sum': 1}}},
         {'$sort': {'count': -1}},
