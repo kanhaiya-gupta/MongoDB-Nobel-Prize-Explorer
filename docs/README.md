@@ -1,6 +1,6 @@
 # Nobel Laureates ETL Pipeline
 
-This project implements an **Extract, Transform, Load (ETL)** pipeline for processing Nobel Prize data stored in MongoDB. It extracts data from the `nobel` database (containing `laureates` and `prizes` collections), transforms it (e.g., standardizing dates, calculating ages at award time), loads it into a new collection (`laureates_transformed`), and generates a visualization of laureates by country.
+This project builds an **Extract, Transform, Load (ETL)** pipeline to process Nobel Prize data from the MongoDB "nobel" database, which includes "laureates" and "prizes" collections. It extracts data using the connected client (client.nobel), transforms it by standardizing dates and calculating ages at award time, and loads the results into a new "laureates_transformed" collection. Leveraging MongoDB’s NoSQL flexibility, the pipeline handles dynamic schemas to streamline data processing. The final step generates a visualization of laureates by country based on the transformed data. All code and outputs are crafted to align with the project’s analytical goals.
 
 ## Project Structure
 
