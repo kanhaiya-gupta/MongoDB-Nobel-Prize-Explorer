@@ -1,6 +1,6 @@
 # MongoDB Nobel Prize Explorer ETL Pipeline
 
-This project implements an **Extract, Transform, Load (ETL)** pipeline to process Nobel Prize data from a MongoDB database (`nobel.laureates`). It offers two execution modes:
+This project implements an **Extract, Transform, Load (ETL)** pipeline to process Nobel Prize data from a MongoDB database (`nobel.laureates`). It supports two execution modes:
 
 1. **Serial Run**: Executes the pipeline locally using `main.py` for quick testing and development.
 2. **Kubernetes Run**: Deploys a distributed pipeline using Kind, Argo Workflows, and Docker for scalability and orchestration.
@@ -27,6 +27,7 @@ MongoDB-Nobel-Prize-Explorer/
 ├── docs/
 │   ├── README.md              # This file
 ├── manifests/
+│   ├── argo-rbac.yaml         # RBAC configuration for Argo Workflows
 │   ├── etl-workflow.yaml      # Argo Workflow definition
 │   ├── mongodb.yaml           # MongoDB deployment and service
 │   ├── pvc.yaml               # Persistent Volume Claim for data
@@ -146,8 +147,8 @@ bash build_and_upload_images.sh
 ```bash
 bash apply_manifests.sh
 ```
-- Deploys MongoDB, a PVC, and Argo Workflows.
-- Submits `etl-workflow.yaml` and watches execution.
+- Deploys MongoDB, a PVC, and RBAC permissions (`argo-rbac.yaml`).
+- Installs Argo Workflows and submits `etl-workflow.yaml`.
 
 #### Step 3: Verify Outputs
 - Data files:
@@ -163,18 +164,24 @@ bash apply_manifests.sh
 
 #### Workflow Details
 - **Extract**: Writes laureates to `/data/extracted_laureates.json`.
-- **Transform**: Splits into chunks (e.g., 4 chunks), writes to `/data/transformed_chunk_*.json`.
+- **Transform**: Splits into 4 chunks, writes to `/data/transformed_chunk_*.json`.
 - **Load**: Loads chunks into MongoDB.
 - **Visualize**: Generates a plot from transformed data.
+
+#### RBAC Configuration
+- `manifests/argo-rbac.yaml` grants the default ServiceAccount permissions to manage pods and workflows, resolving errors like:
+  ```
+  User "system:serviceaccount:default:default" cannot patch resource "pods"
+  ```
 
 ## Configuration
 
 - **Serial Run**: Edit `src/config.py`:
   - `MONGODB_URI`: Default `mongodb://localhost:27017/`.
   - `DATABASE_NAME`: Default `nobel`.
-- **Kubernetes Run**: Modify environment variables in `etl-workflow.yaml` or Dockerfiles:
+- **Kubernetes Run**: Modify environment variables in `etl-workflow.yaml`:
   - `MONGODB_URI`: `mongodb://mongodb-service:27017/`.
-  - `CHUNK_SIZE`: Adjust in `transform-task`.
+  - `CHUNK_SIZE`: Adjust in `transform-task` (default 250).
 
 ## Troubleshooting
 
@@ -184,7 +191,7 @@ bash apply_manifests.sh
   mongo --host localhost --port 27017
   ```
 - **Missing Output**:
-  - Check `nobel.laureates` has data.
+  - Verify `nobel.laureates` has data.
 
 ### Kubernetes Run
 - **Pod Logs**:
@@ -196,8 +203,11 @@ bash apply_manifests.sh
   argo list -n default --context kind-nobel-etl-cluster
   argo logs -n default @latest --context kind-nobel-etl-cluster
   ```
-- **RBAC Issues**:
-  - Apply `manifests/argo-rbac.yaml` if permissions errors occur (see previous responses).
+- **Permissions Issues**:
+  - Ensure `argo-rbac.yaml` is applied:
+    ```bash
+    kubectl apply -f manifests/argo-rbac.yaml --context kind-nobel-etl-cluster
+    ```
 
 ## Cleanup
 
@@ -231,7 +241,7 @@ Expected `laureates.json` structure:
 
 ## Contributing
 
-Submit issues or pull requests to enhance functionality, add tests, or improve docs.
+Submit issues or pull requests to enhance functionality, add tests, or improve documentation.
 
 ## License
 
@@ -240,9 +250,9 @@ MIT License (see `LICENSE` file if present).
 ---
 
 ### Notes
-- **Serial Run**: Assumes `main.py` orchestrates `extract.py`, `transform.py`, `load.py`, and `visualization.py`. If your `main.py` differs, I can refine this section with its actual logic.
-- **Kubernetes Run**: Reflects your current setup with Argo Workflows and chunked processing. The RBAC fix is referenced but not repeated unless needed.
+- **Integration of `argo-rbac.yaml`**: Explicitly mentioned in the Kubernetes setup and troubleshooting sections to reflect its role in fixing the RBAC error you encountered.
+- **Serial Run**: Kept simple, assuming `main.py` orchestrates the pipeline using `src/` modules. If it uses `scripts/` instead, let me know, and I’ll adjust.
+- **Kubernetes Run**: Streamlined to match your workflow, with `argo-rbac.yaml` as a key component.
 - **Placement**: Save as `docs/README.md` per your structure.
-- **Customization**: Replace `<repository-url>` with your repo link if applicable.
 
-Let me know if you want to tweak any part (e.g., add specific script details or test instructions)!
+This version should fully document both execution paths and address the RBAC issue we resolved. Let me know if you’d like further refinements!
