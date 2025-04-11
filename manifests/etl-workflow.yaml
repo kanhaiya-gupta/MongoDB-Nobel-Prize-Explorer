@@ -1,0 +1,158 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: nobel-etl-
+  namespace: default
+spec:
+  entrypoint: etl-pipeline
+  templates:
+  - name: etl-pipeline
+    dag:
+      tasks:
+      - name: extract
+        template: extract-task
+      - name: transform-0
+        template: transform-task
+        arguments:
+          parameters:
+          - name: chunk-index
+            value: "0"
+        dependencies:
+          - extract
+      - name: transform-1
+        template: transform-task
+        arguments:
+          parameters:
+          - name: chunk-index
+            value: "1"
+        dependencies:
+          - extract
+      - name: transform-2
+        template: transform-task
+        arguments:
+          parameters:
+          - name: chunk-index
+            value: "2"
+        dependencies:
+          - extract
+      - name: transform-3
+        template: transform-task
+        arguments:
+          parameters:
+          - name: chunk-index
+            value: "3"
+        dependencies:
+          - extract
+      - name: load-0
+        template: load-task
+        arguments:
+          parameters:
+          - name: chunk-index
+            value: "0"
+        dependencies:
+          - transform-0
+      - name: load-1
+        template: load-task
+        arguments:
+          parameters:
+          - name: chunk-index
+            value: "1"
+        dependencies:
+          - transform-1
+      - name: load-2
+        template: load-task
+        arguments:
+          parameters:
+          - name: chunk-index
+            value: "2"
+        dependencies:
+          - transform-2
+      - name: load-3
+        template: load-task
+        arguments:
+          parameters:
+          - name: chunk-index
+            value: "3"
+        dependencies:
+          - transform-3
+      - name: visualize
+        template: visualize-task
+        dependencies:
+          - load-0
+          - load-1
+          - load-2
+          - load-3
+
+  - name: extract-task
+    container:
+      image: localhost:5000/nobel-etl-extract:latest
+      command: ["python", "/app/scripts/extract.py"]  # Path to extract.py
+      env:
+      - name: MONGODB_URI
+        value: "mongodb://mongodb-service:27017/"
+      volumeMounts:
+      - name: data
+        mountPath: /data
+    volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: etl-data-pvc
+
+  - name: transform-task
+    inputs:
+      parameters:
+      - name: chunk-index
+    container:
+      image: localhost:5000/nobel-etl-transform:latest
+      command: ["python", "/app/scripts/transform_chunk.py"]  # Path to transform_chunk.py
+      env:
+      - name: CHUNK_INDEX
+        value: "{{inputs.parameters.chunk-index}}"
+      - name: CHUNK_SIZE
+        value: "250"
+      - name: INPUT_PATH
+        value: /data/extracted_laureates.json
+      - name: OUTPUT_PATH
+        value: /data/transformed_chunk_{{inputs.parameters.chunk-index}}.json
+      volumeMounts:
+      - name: data
+        mountPath: /data
+    volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: etl-data-pvc
+
+  - name: load-task
+    inputs:
+      parameters:
+      - name: chunk-index
+    container:
+      image: localhost:5000/nobel-etl-load:latest
+      command: ["python", "/app/scripts/load_chunk.py"]  # Path to load_chunk.py
+      env:
+      - name: MONGODB_URI
+        value: "mongodb://mongodb-service:27017/"
+      - name: INPUT_PATH
+        value: /data/transformed_chunk_{{inputs.parameters.chunk-index}}.json
+      volumeMounts:
+      - name: data
+        mountPath: /data
+    volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: etl-data-pvc
+
+  - name: visualize-task
+    container:
+      image: localhost:5000/nobel-etl-visualize:latest
+      command: ["python", "/app/src/visualization.py"]  # Path to visualization.py
+      env:
+      - name: MONGODB_URI
+        value: "mongodb://mongodb-service:27017/"
+      volumeMounts:
+      - name: data
+        mountPath: /app/results
+    volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: etl-data-pvc
