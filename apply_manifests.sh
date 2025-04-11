@@ -32,7 +32,10 @@ sleep 5
 
 echo "Applying manifests/mongodb.yaml..."
 kubectl apply -f manifests/mongodb.yaml
-sleep 30
+sleep 60
+
+echo "Applying RBAC for Argo Workflow..."
+kubectl apply -f manifests/argo-rbac.yaml
 
 echo "Submitting manifests/etl-workflow.yaml..."
 argo submit -n default manifests/etl-workflow.yaml --watch
