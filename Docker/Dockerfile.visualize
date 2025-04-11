@@ -1,0 +1,19 @@
+# Docker/Dockerfile-visualize
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir pymongo matplotlib
+
+COPY src/config.py src/config.py
+COPY src/visualization.py src/visualization.py
+
+ENV PYTHONUNBUFFERED=1
+ENV MONGODB_URI=mongodb://mongodb:27017/
+
+CMD ["python", "-c", "from src.visualization import visualize_laureates_by_country; from pymongo import MongoClient; from src.config import Config; client = MongoClient(Config.MONGODB_URI); db = client[Config.DATABASE_NAME]; visualize_laureates_by_country(db[Config.TARGET_COLLECTION])"]

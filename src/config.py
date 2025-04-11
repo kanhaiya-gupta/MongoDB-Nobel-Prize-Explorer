@@ -9,4 +9,5 @@ class Config:
     TARGET_COLLECTION = "laureates_transformed"
     BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))  # Root directory
     RESULTS_DIR = os.path.join(BASE_DIR, 'results')
+    OUTPUT_PATH = os.path.join(BASE_DIR, 'results', 'extracted_laureates.json')
     VISUALIZATION_OUTPUT = os.path.join(RESULTS_DIR, "laureates_by_country.png")

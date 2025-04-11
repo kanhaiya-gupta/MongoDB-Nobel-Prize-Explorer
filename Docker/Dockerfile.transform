@@ -1,0 +1,22 @@
+# Docker/Dockerfile-transform
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir pymongo
+
+COPY src/config.py src/config.py
+COPY src/transform.py src/transform.py
+COPY scripts/transform_chunk.py scripts/transform_chunk.py
+
+ENV PYTHONUNBUFFERED=1
+ENV INPUT_PATH=/data/extracted_laureates.json
+ENV OUTPUT_PATH=/data/transformed_chunk.json
+ENV CHUNK_INDEX=0
+ENV CHUNK_SIZE=100
+
+CMD ["python", "scripts/transform_chunk.py"]
